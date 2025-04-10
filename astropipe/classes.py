@@ -282,12 +282,12 @@ class Image:
         plt.tight_layout()
         return ax
     
-    def get_background(self, growth_rate=1.05, out=None):
+    def get_background(self, growth_rate=1.05, init=1, out=None):
         '''
         Calculates the local background value around object using method
         implemented in astropipe.profile.background_estimation
         '''
-        results = background_estimation_euclid(self.data, self.pix, self.pa, self.eps, 
+        results = background_estimation_euclid(self.data, self.pix, self.pa, self.eps, init=init,
                                                                         plot=out, growth_rate=growth_rate)
         self.bkg, self.bkgstd, self.bkgrad  = results['ellip_bkg'], results['rect_bkgstd'], results['bkgrad']
         
@@ -363,7 +363,7 @@ class SExtractor:
 
     def __init__(self, params=None, config=None, sexpath=None):
 
-        sex_param_path = os.path.abspath(join(path_to_package, '..','extern','SExtractor'))
+        sex_param_path = os.path.abspath(join(path_to_package, '..','external','SExtractor'))
         self.files_default = {
             "FILTER_NAME": join(sex_param_path,'default.conv'),
             "PSF_NAME": join(sex_param_path, "default.psf"),

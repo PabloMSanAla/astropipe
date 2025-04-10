@@ -14,6 +14,7 @@ from PyPDF2 import PdfReader, PdfMerger
 
 from astropy.wcs import WCS, utils
 from astropy.coordinates import SkyCoord
+from astropy.nddata import Cutout2D
 from astropy.io import fits
 from astropy.stats import sigma_clipped_stats
 from scipy.signal import convolve2d
@@ -22,6 +23,8 @@ from scipy.signal import argrelextrema
 from scipy import stats
 
 from photutils.centroids import centroid_com, centroid_quadratic, centroid_2dg
+
+from autoprof.pipeline_steps import Center_HillClimb
 
 import datetime
 import warnings
@@ -74,7 +77,7 @@ def redshift_to_kpc(redshift,H0=70,Tcmb0 = 2.725, Om0=0.3):
     cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
     return (cosmo.luminosity_distance(redshift) * 1000 * u.kpc/u.Mpc).value
 
-def redshift_to_gyr(z,H0=70,Tcmb0 = 2.725, Om0=0.3):
+def redshift_to_gyr(z, H0=70, Tcmb0=2.725, Om0=0.3):
     """
     Converts redshift to Gyr using LambdaCDM cosmology.
 
@@ -98,45 +101,61 @@ def redshift_to_gyr(z,H0=70,Tcmb0 = 2.725, Om0=0.3):
     age = cosmo.age(z)
     return age.to(u.Gyr).value
 
-def kpc_to_arcsec(kpc, distance):
+def kpc_to_arcsec(kpc, redshift, H0=70, Tcmb0=2.725, Om0=0.3):
     '''Function that given a physical size of an object
-    and its physical distance it converts it into the
+    and its redshift it converts it into the
     angular size in arcseconds.
     
     Parameters
     ----------
         kpc : float
             Physical size in kpc.
-        distance : float
-            Physical distance in kpc.
+        redshift : float
+            Redshift of the object.
+        H0 : float, optional
+            Hubble constant. The default is 70. [km/s/Mpc]  
+        Tcmb0 : float, optional
+            CMB temperature. The default is 2.725. [K]
+        Om0 : float, optional
+            Matter density. The default is 0.3.
     
     Returns
     -------
         arcsec : float
             Angular size in arcseconds.
     '''
+    cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
+    da = cosmo.angular_diameter_distance(redshift).value*1e3  # Mpc --> kpc
     arcsec_to_rad = np.pi/(180*3600)
-    return (kpc)/(arcsec_to_rad*distance)
+    return (kpc)/(arcsec_to_rad*da)
 
-def arcsec_to_kpc(arcsec, distance):
+def arcsec_to_kpc(arcsec, redshift, H0=70, Tcmb0=2.725, Om0=0.3):
     '''Function that given a projected angular size of an object
-    and its physical distance it converts it into the
-    physical size in same units.
+    and its redshift it converts it into the
+    physical size in same units. 
 
     Parameters
     ----------
         arcsec : float
             Angular size in arcsec.
-        distance : float
-            Physical distance in kpc.
+        redshift : float
+            Redshift of the object.
+        H0 : float, optional
+            Hubble constant. The default is 70. [km/s/Mpc]
+        Tcmb0 : float, optional
+            CMB temperature. The default is 2.725. [K]
+        Om0 : float, optional
+            Matter density. The default is 0.3.
     
     Returns
     -------
         kpc : float
             Physical size in kpc.
       '''
+    cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
+    da = cosmo.angular_diameter_distance(redshift).value*1e3  # Mpc --> kpc
     arcsec_to_rad = np.pi/(180*3600)
-    return arcsec*arcsec_to_rad*distance
+    return arcsec*arcsec_to_rad*da
 
 def convert_PA(angle):
     if angle <0:
@@ -282,6 +301,8 @@ def closest(data, value):
 
 
 def cutout(file, center, width, hdu=0, mode='image', out=None):
+
+
     '''
     Crop a fits file to a given width and center preserving the WCS. 
     
@@ -309,29 +330,67 @@ def cutout(file, center, width, hdu=0, mode='image', out=None):
     
     data = fits.getdata(file,hdu)
     header = fits.getheader(file,hdu)
+    wcs = WCS(header)
 
     if mode == 'wcs':
-        sky = SkyCoord(center[0], center[1], unit='deg')
-        wcs = WCS(header)
-        center = np.int64(wcs.world_to_pixel(sky)).T[0]
-        width = np.int64(width / utils.proj_plane_pixel_scales(wcs))
+        pixel_scales = utils.proj_plane_pixel_scales(wcs)
+        width = np.int64([width[1] / pixel_scales[1], width[0]/pixel_scales[0]])
+        center = wcs.world_to_pixel_values(*center)
     elif mode == 'image':
         center = np.int64(center)
-        width = np.int64(width)
+        width = np.int64(width)[::-1]
     else:
         raise ValueError('mode must be image or wcs')
 
+    # cropped, header, coords = crop(data, header, center, width)
+    cropped = Cutout2D(data, center, width, wcs=wcs)
     
-    cropped, header, coords = crop(data, header, center, width)
+    header.update(cropped.wcs.to_header())
+    cutout_hdu = fits.PrimaryHDU(data=cropped.data, header=header)
 
     if out is None: out = file.replace('.fits','_crop.fits')
     
-    header['COMMENT'] = "= Cropped fits file ({}).".format(datetime.date.today())
-    header['CROP'] = (f'{coords[1][0]}:{coords[1][1]},{coords[0][0]}:{coords[0][1]}',
-                          'Range of pixels used for this cutout [y0:y1,x0:x1]')
-    fits.PrimaryHDU(cropped, header).writeto(out,overwrite=True)
+    cutout_hdu.header['COMMENT'] = "= Cropped fits file ({}).".format(datetime.date.today())
+    cutout_hdu.header['CENTER'] = (f'{center[0]:.2f},{center[1]:.2f}',
+                                   'Center of the cutout [x,y]')
+    cutout_hdu.header['SIZE'] = (f'{width[0]:d},{width[1]:d}',
+                                 'Size of the cutout [x,y]')
+    cutout_hdu.header['ORFILE'] = (os.path.basename(file), 'Original file')
+
+    cutout_hdu.writeto(out, overwrite=True)
 
     return os.path.isfile(out)
+
+
+def center_hillclimb(data, center, centeringring = 10, pixscale = 0.1):
+    '''
+    Finds the center of an object in an image using a Hill Climb algorithm
+    Implementation from astropipe.pipeline_steps.Center_HillClimb.
+
+    Parameters
+    ----------
+        data : array_like
+            Image data.
+        center : tuple
+            Initial center of the object in the image. (x,y)
+        centeringring : int, optional
+            Radius of the centering ring. AutoProf parameter. Default is 10. 
+        pixscale : float, optional
+            Pixel scale of the image. Default is 0.1.
+
+    Returns
+    -------
+        x,y : tuple
+            New center of the object in the image.
+    '''
+
+    options = {'ap_name':'','ap_centeringring':centeringring, 'ap_pixscale':pixscale,
+                'ap_guess_center':  {'x':center[0],'y':center[1]}}
+    results = {'background': 0.0, 'background noise': 0.0, 'psf fwhm': 1}
+
+    _,new_results = Center_HillClimb(data, results, options)
+
+    return new_results['center']['x'],new_results['center']['y']
 
 def averageBinning(data, binning=2):
     """
