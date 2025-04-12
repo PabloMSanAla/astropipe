@@ -226,8 +226,8 @@ def morphology(binary):
     -------
         angle : float 
             Angle of the object in degrees [x to y]
-        major : float
-            Major axis of the object in pixels
+        sma : float
+            Semi-major axis of the object in pixels
         eps : float
             Ellipticity of the object [1-b/a]
     # '''
@@ -238,20 +238,16 @@ def morphology(binary):
     y2 =(moments['m02']/moments['m00'])-(moments['m01']/moments['m00'])**2
     xy = (moments['m11']/moments['m00'])-(
                 moments['m10']*moments['m01']/moments['m00']**2)
-    
-    major = np.sqrt(0.5*(x2+y2) + np.sqrt((0.5*(x2-y2))**2 + xy**2))
-    minor = np.sqrt(0.5*(x2+y2) - np.sqrt((0.5*(x2-y2))**2 + xy**2))
+    area = moments['m00']
+
+    common_term = np.sqrt((moments['mu20'] - moments['mu02'])**2 + 4 * moments['mu11']**2)
+    a = np.sqrt(2 * (moments['mu20'] + moments['mu02'] + common_term) / area)  # Semi-major axis
+    b = np.sqrt(2 * (moments['mu20'] + moments['mu02'] - common_term) / area)  # Semi-minor axis
+
     angle = 0.5*np.arctan2(2*xy,x2-y2)*180/np.pi
-    eps = 1 - minor/major
+    eps = 1 - b/a
 
-    arguments = np.argwhere(binary)
-    xdist = np.nanmax(arguments[:,1]) -  np.nanmin(arguments[:,1])
-    ydist = np.nanmax(arguments[:,0]) -  np.nanmin(arguments[:,0]) 
-    sma_x = xdist / np.cos(angle*np.pi/180)
-    sma_y = ydist / np.sin(angle*np.pi/180)
-    sma = np.nanmax([sma_x,sma_y])/2
-
-    return angle,sma,eps
+    return angle,a,eps
 
 def rebin(arr, new_shape):
     shape = (new_shape[0], arr.shape[0] // new_shape[0],
