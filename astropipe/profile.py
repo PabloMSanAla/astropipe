@@ -1195,7 +1195,6 @@ def background_estimation_euclid(data, center, pa, eps, init=1, growth_rate=1.04
             'cxs' : cxs.astype(np.int16).T, 'cys' : cys.astype(np.int16).T, 
             'rms' : rms.T, 'medians' : medians.T, 'stds' : stds.T
             }
-    print(results)
     
     if plot != None:
         fig = plt.figure(figsize=(6,9))
@@ -1566,7 +1565,7 @@ def autoprof_isophote_photometry(data, center, pa_init, eps_init, growth=0.05,
     tab = Table(results)
     tab['x'] = center[0]*np.ones_like(tab['fit R'])
     tab['y'] = center[1]*np.ones_like(tab['fit R'])
-    
+    tab.meta = options
     return tab
 
 def res_sum_squares(dmdr, cog, slope, abcissa):
