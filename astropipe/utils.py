@@ -75,7 +75,7 @@ def redshift_to_kpc(redshift,H0=70,Tcmb0 = 2.725, Om0=0.3):
             Physical distance in kpc.
     '''
     cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
-    return (cosmo.luminosity_distance(redshift) * 1000 * u.kpc/u.Mpc).value
+    return (cosmo.luminosity_distance(redshift) * 1000 * u.kpc/u.Mpc)
 
 def redshift_to_gyr(z, H0=70, Tcmb0=2.725, Om0=0.3):
     """
@@ -125,7 +125,7 @@ def kpc_to_arcsec(kpc, redshift, H0=70, Tcmb0=2.725, Om0=0.3):
             Angular size in arcseconds.
     '''
     cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
-    da = cosmo.angular_diameter_distance(redshift).value*1e3  # Mpc --> kpc
+    da = cosmo.angular_diameter_distance(redshift)*1e3  # Mpc --> kpc
     arcsec_to_rad = np.pi/(180*3600)
     return (kpc)/(arcsec_to_rad*da)
 
@@ -153,9 +153,9 @@ def arcsec_to_kpc(arcsec, redshift, H0=70, Tcmb0=2.725, Om0=0.3):
             Physical size in kpc.
       '''
     cosmo = FlatLambdaCDM(H0=H0* u.km / u.s / u.Mpc, Tcmb0=Tcmb0* u.K , Om0=Om0)
-    da = cosmo.angular_diameter_distance(redshift).value*1e3  # Mpc --> kpc
+    da = cosmo.angular_diameter_distance(redshift)*1e3  # Mpc --> kpc
     arcsec_to_rad = np.pi/(180*3600)
-    return arcsec*arcsec_to_rad*da
+    return (arcsec*arcsec_to_rad*da).value
 
 def convert_PA(angle):
     if angle <0:
@@ -638,7 +638,7 @@ def find_center(data, center, width=30):
     y += np.int32(center[1]-width)
     return x,y
 
-def average_bin(x,y,bins):
+def average_bin(x,y,bins, method='mean'):
     '''Average a variable y in bins of x in 1D.
     
     Parameters
@@ -649,25 +649,28 @@ def average_bin(x,y,bins):
             y-axis values.
         bins : array
             Bins to use.
+        method: string
+            Method to use for average, mean or median.
     
     Returns
     -------
         ybins : array
             Averaged y values in bins of x.
-        ystd:   array
-            Error on the average y values.
+        rmsBinned:   array
+            RMS of y binned values.
+        rmsMean:   float
+            Average (from method) of all rms values 
     '''
+    comb = np.nanmean if method=='mean' else np.nanmedian
     x = np.zeros_like(x) + np.array(x)
     y = np.zeros_like(y) + np.array(y)
-    xbins = np.digitize(x,bins)
-    ybins = np.zeros(len(bins)-1)
-    ystd = np.zeros(len(bins)-1)
-    for i in range(1,len(bins)):
-        ind = xbins==i
-        ybins[i-1] = np.nanmean(y[ind])
-        ystd[i-1] = np.nanstd(y[ind])/np.sqrt(np.sum(ind))
-    
-    return ybins,ystd
+    args = np.digitize(x,bins)
+    ybins = np.array([comb(y[args==i]) for i in range(1,len(bins))])
+    mean_r = np.array([ybins[i-1] if 0 < i < len(ybins) + 1 else np.nan for i in args])
+    rms = np.sqrt((y-mean_r).astype(np.float32)**2)
+    rmsBined = np.array([comb(rms[args==i+1]) for i in range(len(ybins))])
+    rmsMean = comb(rms)
+    return ybins, rmsBined, rmsMean
 
 
 def limits(x,y,n=30):
@@ -867,6 +870,8 @@ def mass_iband_offset(mass, rms=0.17):
     -------
         offset : float
                 Offset to be added to the i-band magnitude.
+        e_offset: float
+                Error on the offset given the rms of the relation.
     '''
 
     offset = -0.052*mass*mass + 0.67*mass - 1.20
