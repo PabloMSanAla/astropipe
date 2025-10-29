@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "C.C"}
 readme = "README.md"
-requires-python = ">=3.11,<4.0.0"
+requires-python = ">=3.10,<4.0.0"
 dependencies = [
     "astropy (>=5.3.4,<6.0.0)",
     "astroquery (>=0.4.7,<0.5.0)",
@@ -20,7 +20,6 @@ dependencies = [
     "opencv-python (>=4.10.0.84,<5.0.0.0)",
     "photutils (>=1.5.0,<2.0.0)",
     "pypdf2 (>=3.0.1,<4.0.0)",
-    "regions (>=0.10,<0.11)",
     "scipy (>=1.14.1,<2.0.0)",
     "scikit-learn (>=1.5.2,<2.0.0)",
     "scikit-image (>=0.24.0,<0.25.0)",

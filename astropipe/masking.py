@@ -10,15 +10,14 @@ import cv2
 import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
-from regions import CirclePixelRegion
 from astropy.wcs.utils import skycoord_to_pixel, pixel_to_skycoord
 from astropy.wcs import WCS, utils
 import astropy.units as u
 from astropy.coordinates import Angle
-from regions.core import PixCoord
 
 from scipy.ndimage import gaussian_filter
 from photutils.segmentation import detect_sources
+from photutils.aperture import CircularAperture
 from fabada import fabada
 
 
@@ -646,9 +645,9 @@ def ds9_region_masking(IMG,folders):
     for index, row in df_region.iterrows():
 
         pixel_center = skycoord_to_pixel(SkyCoord(row['ra'],row['dec'], unit=units,frame="fk5"), IMG.wcs)
-        pixel_center = PixCoord(pixel_center[0],pixel_center[1])
         pixel_radius = np.float64(row['radius'][:-1])/IMG.pixel_scale
-        mask_region = CirclePixelRegion(pixel_center,pixel_radius).to_mask(mode='exact')
+        aperture = CircularAperture(pixel_center, pixel_radius)
+        mask_region = aperture.to_mask(method='exact')
         IMG.data.mask[np.where(mask_region.to_image(IMG.data.mask.shape)==1)] = True
     
     mask_array = np.array(1-IMG.data.mask,dtype = np.uint8)
