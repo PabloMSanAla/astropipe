@@ -62,7 +62,7 @@ help:
 # -----------------------------------------------------
 #
 init:
-	poetry install --no-dev
+	conda env create -f environment.yml
 
 #
 # Sotware Installation for user

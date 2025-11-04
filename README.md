@@ -85,22 +85,26 @@ To use the masking module you need to have different external software for Astro
 and the aliases need to be stored in your environment variable so you can call the different software. In particular, for Gnuastro, it uses NoiseChisel. This needs to be installed if you want to create masks. However there are different methods that use different software, so it's not mandatory to have all installed but at least, one of them. To be able to use the MTObjects in this library, a github patch needs to be apply to create some changes. The patch can be found in [*mtobjects.patch*](https://github.com/PabloMSanAla/astropipe/blob/main/external/MTObjects/mtobjects.pacth).
 
 #### Python libraries
-The library is written in Python and uses different libraries. Most of them can be installed using pip. You can find the main requisites in the [*pyproject.toml*](https://github.com/PabloMSanAla/astropipe/blob/main/pyproject.toml). Furthermore, you must install the [sewpy](https://github.com/megalut/sewpy) library apart from the ones installed automatically with the requirements.txt file.
+The library is written in Python and uses different libraries. Most of them can be installed using pip. You can find the main requisites in the [*pyproject.toml*](https://github.com/PabloMSanAla/astropipe/blob/main/pyproject.toml). 
 
 
 ### Installation
 
-You can install the library using pip as follows:
+You can install the library and all the dependencies using a [*conda*][https://www.anaconda.com/] environment as follows:
 
 ```sh
   git clone https://github.com/PabloMSanAla/astropipe.git
   cd astropipe
-  pip install -e .
+  conda env create -f environment.yml
 ```
 
+This will create an environment named *astropipe*, which you can activate with:
 
-I strongly recommend to install it in a separate virtual environment. You could also add this to your Python path in this repository and you would not depend on pip. 
+```sh
+  conda activate astropipe
+```
 
+Once activated, all functionalities of the astropipe library are available.
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->

@@ -1,0 +1,12 @@
+name: astropipe
+channels:
+  - conda-forge
+  - astrorama
+dependencies:
+  - sourcextractor
+  - gnuastro
+  - python=3.10
+  - pip==23.1.2
+  - pip:
+      - poetry>=2.2.1
+      - -e .

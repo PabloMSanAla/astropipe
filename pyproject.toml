@@ -28,7 +28,8 @@ dependencies = [
     "urllib3 (>=2.2.3,<3.0.0)",
     "wget (>=3.2,<4.0)",
     "pyqt5 (>=5.15.11,<6.0.0)",
-    "pandas>=2.3.3"
+    "pandas>=2.3.3",
+    "mtobjects @ git+https://github.com/PabloMSanAla/mtobjects.git"
         
 ]
 
