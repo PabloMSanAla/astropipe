@@ -29,7 +29,8 @@ dependencies = [
     "wget (>=3.2,<4.0)",
     "pyqt5 (>=5.15.11,<6.0.0)",
     "pandas>=2.3.3",
-    "mtobjects @ git+https://github.com/PabloMSanAla/mtobjects.git"
+    "mtobjects @ git+https://github.com/PabloMSanAla/mtobjects.git",
+    "ipykernel (>=7.1.0,<8.0.0)"
         
 ]
 
