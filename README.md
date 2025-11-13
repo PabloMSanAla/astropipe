@@ -82,7 +82,7 @@ To use the masking module you need to have different external software for Astro
 - [Gnuastro](https://www.gnu.org/software/gnuastro/)
 - [MTObjects](https://github.com/CarolineHaigh/mtobjects)
 
-and the aliases need to be stored in your environment variable so you can call the different software. In particular, for Gnuastro, it uses NoiseChisel. This needs to be installed if you want to create masks. However there are different methods that use different software, so it's not mandatory to have all installed but at least, one of them. To be able to use the MTObjects in this library, a github patch needs to be apply to create some changes. The patch can be found in [*mtobjects.patch*](https://github.com/PabloMSanAla/astropipe/blob/main/external/MTObjects/mtobjects.pacth).
+and the aliases need to be stored in your environment variable so you can call the different software. In particular, for Gnuastro, it uses NoiseChisel. This needs to be installed if you want to create masks. However there are different methods that use different software, so it's not mandatory to have all installed but at least, one of them. 
 
 #### Python libraries
 The library is written in Python and uses different libraries. Most of them can be installed using pip. You can find the main requisites in the [*pyproject.toml*](https://github.com/PabloMSanAla/astropipe/blob/main/pyproject.toml). 
@@ -90,7 +90,7 @@ The library is written in Python and uses different libraries. Most of them can 
 
 ### Installation
 
-You can install the library and all the dependencies using a [*conda*][https://www.anaconda.com/] environment as follows:
+You can install the library and all the external dependencies using a [*conda*](https://www.anaconda.com/) environment as follows:
 
 ```sh
   git clone https://github.com/PabloMSanAla/astropipe.git
