@@ -558,7 +558,8 @@ class AstroGNU():
         os.system(self.nc_cmd)
         
         self.detections = fits.getdata(self.nc_file,'DETECTIONS')
-        self.background = np.nanmean(fits.getdata(self.nc_file,'SKY'))
+        self.background_map = fits.getdata(self.nc_file,'SKY')
+        self.background = np.nanmean(self.background_map)
 
         if not keep: os.remove(self.nc_file)
         if self.temp: os.remove(self.file)
@@ -596,6 +597,12 @@ class AstroGNU():
         if seg: os.remove(self.seg_file)
         if cat: os.remove(self.cat_file)
         if self.temp: os.remove(self.file)
+
+    def cmap(self, background_color='#000000ff', seed=None):
+        if hasattr(self,'objects'):
+            return make_cmap(np.int64(np.nanmax(self.objects)), background_color=background_color, seed=seed)
+        else:
+            return make_cmap(1, background_color=background_color, seed=seed)
         
 
 

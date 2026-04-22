@@ -10,6 +10,7 @@ from fabada import fabada
 import argparse
 from math import gamma
 from PyPDF2 import PdfReader, PdfMerger
+from scipy import ndimage as ndi
 
 
 from astropy.wcs import WCS, utils
@@ -201,7 +202,7 @@ def binarize(image, nsigma=1, mask=None, center=None):
         image = np.ma.getdata(image)
 
     _, median, std = sigma_clipped_stats(image, sigma=2.5, mask=mask, maxiters=2)
-    smooth = fabada(image, std**2)
+    smooth = fabada(image, std**2, max_iter=40)
     _, median, std = sigma_clipped_stats(image, sigma=2.5, mask=mask, maxiters=2)
     index = smooth > median+nsigma*std
     binarized = np.zeros_like(image)
@@ -209,6 +210,7 @@ def binarize(image, nsigma=1, mask=None, center=None):
     label = cv2.connectedComponentsWithAlgorithm(binarized.astype(np.uint8), connectivity=8, ltype=cv2.CV_32S, ccltype=cv2.CCL_WU)[1]
     binarized[label != label[y,x]] = 0
     binarized = cv2.erode(binarized, np.ones((5,5)), iterations=1)
+    binarized = ndi.binary_fill_holes(binarized).astype(np.uint8)
     return binarized
 
 

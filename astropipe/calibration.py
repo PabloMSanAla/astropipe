@@ -14,6 +14,8 @@ import astropy.units as u
 from .classes import AstroGNU
 from .utils import get_pixel_scale
 
+from tqdm import tqdm
+
 
 class astrometry():
     '''
@@ -402,19 +404,17 @@ def autoflat_parallel(flat_files, masterflat=None, config='', hdu=0, ncpu=8, div
     return flat
     
 
-def autoflat(flat_files, masterflat=None, hdu=0,
-             config_nc = '-Z30,30 -t0.25 --interpnumngb=9 -d0.8', dtype=np.float32):
+def autoflat(flat_files, mask_files, masterflat=None, hdu=0, dtype=np.float32):
 
     sc_norm = SigmaClip(sigma=2,maxiters=3)
     sc_comb = SigmaClip(sigma=3,maxiters=3)
     
     if masterflat is None:
-
-        reference = flat_files[np.random.randint(0,len(flat_files),1)[0]]
+        random_index = np.random.randint(0,len(flat_files),1)[0]
+        reference = flat_files[random_index]
         reference_data = fits.getdata(reference,hdu)
-        gnu = AstroGNU(reference, hdu=hdu, dir=os.path.dirname(reference))
-        gnu.noisechisel(config=config_nc)
-        reference_data =  (1-gnu.detections) * reference_data
+        mask = fits.getdata(mask_files[random_index])
+        reference_data =  (1-mask) * reference_data
         reference_data[np.where(reference_data==0)] = np.nan
         reference_data /= np.ma.mean(sc_norm(reference_data))
 
@@ -426,20 +426,16 @@ def autoflat(flat_files, masterflat=None, hdu=0,
     flat = np.zeros(reference_data.shape + (len(flat_files),), dtype=dtype)
     
     i=0
-    for file in flat_files:
+    for file,maskfile in tqdm(zip(flat_files, mask_files), total=len(flat_files), desc='Building flat...'):
         try:
             data = fits.getdata(file,hdu=hdu) 
-            if type(masterflat)==int:
-                gnu = AstroGNU(file,hdu=hdu,dir=os.path.dirname(file))
-            else:
-                gnu = AstroGNU(correct_flat(data, masterflat),hdu=hdu, dir=os.path.dirname(file))
-            gnu.noisechisel(config=config_nc)
-            flat[:,:,i] = (1-gnu.detections) * data
+            mask = fits.getdata(maskfile)
+            flat[:,:,i] = (1-mask) * data
             flat[:,:,i][np.where(flat[:,:,i]==0)]=np.nan
             norm = np.ma.mean(sc_norm(flat[:,:,i] / reference_data))
             flat[:,:,i] = flat[:,:,i]/norm
-        except:
-            print(f'Error in {file}')
+        except Exception as e:
+            print(f'Error in {file}: {e}')
         i+=1
 
     masterflat = np.ma.mean(sc_comb(flat, axis=2),axis=2)

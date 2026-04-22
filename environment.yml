@@ -3,10 +3,12 @@ channels:
   - conda-forge
   - astrorama
 dependencies:
-  - sourcextractor
-  - gnuastro
   - python=3.10
+  - astromatic-source-extractor  # Classic SExtractor
+  - gnuastro
   - pip==23.1.2
   - pip:
-      - poetry>=2.2.1
-      - -e .
+    - poetry>=2.2.1
+    - -e .
+variables:
+  CONDA_SUBDIR: osx-64

@@ -11,15 +11,25 @@ import sys
 
 sys.path.insert(0, os.path.abspath('..'))
 
-project = 'AstroPipe'
-copyright = '2023, Pablo M. Sánchez-Alarcón'
+project = 'astropipe'
+copyright = '2024, Pablo M. Sánchez-Alarcón'
 author = 'Pablo M. Sánchez-Alarcón'
-release = '0.1'
+release = '0.1.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.todo','sphinx.ext.viewcode','sphinx.ext.autodoc']
+extensions = [
+    'sphinx.ext.todo',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary',
+]
+
+autodoc_member_order = 'bysource'
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']

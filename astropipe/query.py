@@ -826,7 +826,7 @@ def query_gaia(ra, dec, radius, maglim=(5,25)):
     result_table = job.get_results()
     return result_table
 
-def query_sdss(ra, dec, radius, maglim=(5,25), fields=None):
+def query_sdss(ra, dec, width, height=None, maglim=(5,25), fields=None):
     '''
     Given a position and a radius, query SDSS DR12 for all sources in the field.
     You can set the fields to query, otherwise it will query the default fields.
@@ -840,8 +840,10 @@ def query_sdss(ra, dec, radius, maglim=(5,25), fields=None):
             Right ascension in degrees.
         dec : float
             Declination in degrees.
-        radius : float
-            Radius in degrees.
+        width : float
+            Width of the query region in degrees.
+        height : float, optional
+            Height of the query region in degrees. If None, it will be set equal to width.
         maglim : tuple, optional
             Magnitude limits to filter the query. The default is (5,25).
         fields : list, optional
@@ -861,8 +863,12 @@ def query_sdss(ra, dec, radius, maglim=(5,25), fields=None):
                               'petroR90_u', 'petroR90_g', 'petroR90_r', 'petroR90_i', 'petroR90_z']
     else:
         photoobj_fields = fields
+    
+    if height is None:
+        height = width
+    
     mag_low, mag_high = maglim
     coords1 = coords.SkyCoord(ra=ra, dec=dec, unit=(u.deg, u.deg), frame='icrs')
-    tab = SDSS.query_region(coords1, radius=radius*u.deg, photoobj_fields=photoobj_fields, timeout=3600)
+    tab = SDSS.query_region(coords1, width=width*u.deg, height=height*u.deg, photoobj_fields=photoobj_fields, timeout=3600)
     tab = tab[(tab['modelMag_g']>mag_low) * (tab['modelMag_g']<mag_high)]
     return tab

@@ -261,8 +261,9 @@ def histplot(data, vmin=None, vmax=None, bins=None):
     fig.tight_layout()
     return fig,ax
 
-def surface_figure(image, profile, out=None, mumax=None, radmax=None, **kwargs):
-    '''Function that creates a figure with the image, the profile and the mask.
+def surface_figure(image, profile, out=None, mumax=None, radmax=None, z=None, useTex=True, **kwargs):
+    '''
+    Function that creates a figure with the image, the profile and the mask.
      In the first axes will show the surface brightness image, 
     in the second the image with the mask and the ellipses fit to create the profile
     in the last column, it will show the profile of the image with its 
@@ -275,19 +276,24 @@ def surface_figure(image, profile, out=None, mumax=None, radmax=None, **kwargs):
         profile : astropipe.Profile
             Profile object to plot.
         out : str, optional
-            Path to save the figure. If None, the figure will not be saved.
+            Path to save the figure. If `None`, the figure will not be saved.
         mumax : float, optional
             Maximum surface brightness value to plot.
         radmax : float, optional
             Maximum radius value to plot in pixels.
-        **kwargs : dict, optional
-        
+        z : float, optional
+            Redshift value for the galaxy.
+        useTex : bool, optional
+            Whether to use LaTeX for text rendering.
+        kwargs : dict, optional
+            Additional keyword arguments to pass to the `plt.imshow` function for the image.
     Returns
     -------
         fig : matplotlib.figure.Figure
             Figure object.
     '''
-    plt.rcParams["text.usetex"]= True
+
+    plt.rcParams["text.usetex"]= useTex
     
     fig = plt.figure(figsize=(11.5,4))
     axim = plt.subplot2grid((5,3),(0,0),rowspan=5)
@@ -306,6 +312,8 @@ def surface_figure(image, profile, out=None, mumax=None, radmax=None, **kwargs):
     extent = np.array([-image.x,image.data.shape[1]-image.x,
                     -image.y,image.data.shape[0]-image.y]).astype(float)
     extent *= image.pixel_scale
+
+
     vmax = np.ceil(ut.mag_limit(image.bkgstd, Zp=image.zp, omega=image.pixel_scale, scale=image.pixel_scale,n=1))
     if np.isnan(vmax): vmax = mumax - 5
     specs = {'vmin':np.ceil(np.nanmin(profile.mu)), 'vmax':vmax, 'cmap':'nipy_spectral', 
@@ -323,6 +331,7 @@ def surface_figure(image, profile, out=None, mumax=None, radmax=None, **kwargs):
                         ax=axmask, step=5, alpha=0.6, max_r=radmax*image.pixel_scale)
 
     fig = profile.plot(axes=(axmu,axpa,axeps))
+    axmu.set_ylim(mumax, 0.96*np.nanmin(profile.mu),)
 
     # Properties 
     for ax in [axim, axmask]:
@@ -362,6 +371,38 @@ def surface_figure(image, profile, out=None, mumax=None, radmax=None, **kwargs):
     cbar.ax.tick_params(labelsize=10)
     cbar.set_label('$\mu$ [mag arcsec$^{-2}$]',fontsize=14,labelpad=10)
 
+    # If redshift is given, transform axis to kpc
+    if z is not None:
+        current_extent = axim.images[0].get_extent()
+        new_extent = [ut.arcsec_to_kpc(x,z) for x in current_extent]
+
+        # Transform axis to kpc
+        # Images
+        axim.images[0].set_extent(new_extent)
+        axmask.images[0].set_extent(new_extent)
+        axmask.images[1].set_extent(new_extent)
+        axim.set_xlim([ut.arcsec_to_kpc(x, z) for x in axim.get_xlim()])
+        axim.set_ylim([ut.arcsec_to_kpc(y, z) for y in axim.get_ylim()])
+        axmask.set_ylim([ut.arcsec_to_kpc(x, z) for x in axmask.get_ylim()])
+        axim.set_xlabel(r"Distance (kpc)", fontsize=14)
+        axim.set_ylabel(r"Distance (kpc)", fontsize=14)
+        axmask.set_xlabel(r"Distance (kpc)", fontsize=14)
+
+        # Curves
+        xlims = axmu.get_xlim()
+        for ax in [axmu, axpa, axeps]:
+            for line in ax.lines:
+                xdata = np.asarray(line.get_xdata())
+                if xdata.size:
+                    line.set_xdata(ut.arcsec_to_kpc(xdata, z))
+
+        for collection in list(axmu.collections):
+            collection.remove()
+        axmu.fill_between(ut.arcsec_to_kpc(xdata, z), profile.upperr, profile.lowerr, color='red', alpha=0.3)
+
+        for ax in [axmu, axpa, axeps]:
+            ax.set_xlim([ut.arcsec_to_kpc(x, z) for x in xlims])
+        axeps.set_xlabel(r"Distance (kpc)", fontsize=14)
 
     fig.subplots_adjust(top=0.915, bottom=0.09,
                         left=0.045, right=0.95,
