@@ -1,5 +1,4 @@
 name: astropipe
-channels:
   - conda-forge
   - astrorama
 dependencies:
