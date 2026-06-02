@@ -47,6 +47,7 @@ matplotlib.rcParams['axes.titlesize']=16
 matplotlib.rcParams['axes.linewidth'] = 1.3
 
 
+
 def gaussian(x, mu, var, A=1):
     exp = np.exp(-((x - mu) ** 2) / (2 * var))
     norm = A / np.sqrt(2 * np.pi * var)
@@ -557,6 +558,7 @@ def ellipse_points(center, a, b, angle, num_points=300):
     Generate x and y coordinates for an ellipse.
 
     Parameters:
+    ----------
     center (tuple): (x, y) coordinates of the ellipse center.
     a (float): Semimajor axis.
     b (float): Semiminor axis.

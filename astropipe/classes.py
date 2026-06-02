@@ -140,10 +140,11 @@ class Image:
         
         Returns
         -------
-            (ra, dec) : ~astropy.coordinates.SkyCoord
-                Sky coordinates of the object.
+            (ra, dec) : tuple
+                Sky coordinates of the object in degrees.
         '''
-        return pixel_to_skycoord(xp, yp, self.wcs)
+        coord = pixel_to_skycoord(xp, yp, self.wcs)
+        return coord.ra.deg, coord.dec.deg
 
     def noise(self,mask,plot=False):
         noise = self.data[where([mask==0, self.data != self.data[0,0]])]
@@ -160,6 +161,7 @@ class Image:
         if plot:
             noise_hist(result,out=plot)
         
+    
     def crop(self, center, width=(500,500)):
         '''
         Use the astropipe.utils.crop function to crop the image
@@ -295,12 +297,12 @@ class Image:
         '''Calculates the morphological parameters of the object
         using a binarize image up to nsigma times the background. '''
 
-        binary = binarize(self.data, nsigma=nsigma, center=(self.x,self.y))
+        binary = binarize(self.data-self.bkg, nsigma=nsigma, center=(self.x,self.y))
         self.pa,self.reff,self.eps = morphology(binary)
         radcent = np.int64(self.reff/4) if  np.int64(self.reff/4)>20 and np.int64(self.reff/4)<80 else 20
         self.pix = find_center(self.data, self.pix, radcent)
         self.x,self.y = np.int64(self.pix)
-
+    
     
     def set_mask(self,mask):
         self.data = ma.masked_array(ma.getdata(self.data), mask=mask)
@@ -369,6 +371,7 @@ class SExtractor:
             "PSF_NAME": join(sex_param_path, "default.psf"),
             "STARNNW_NAME": join(sex_param_path,"default.nnw"),
             'PHOT_FLUXFRAC': 0.9,
+            'CHECKIMAGE_TYPE': 'SEGMENTATION',
         }
 
         self.params_default = [
@@ -415,15 +418,18 @@ class SExtractor:
             self.config[key] = c_dict[key]
 
     def run(self, file, keep=False):
-        sew = sewpy.SEW(params=self.params, config=self.config, sexpath=self.sexpath)
-        self.wordir = sew.workdir
+        self.wordir = join(self.directory,'_temp')
+        if not os.path.exists(self.wordir):
+            os.makedirs(self.wordir)
+        sew = sewpy.SEW(workdir=self.wordir, params=self.params, config=self.config, sexpath=self.sexpath)
+
         if isinstance(file, str):
             self.file = file
         else:
             self.file = join(self.wordir,'sextractor_image.fits')
             fits.PrimaryHDU(file).writeto(self.file,overwrite=True)
 
-        if 'CHECKIMAGE_NAME' not in self.config: self.config['CHECKIMAGE_NAME'] = join(self.wordir,'sex.fits')
+        if 'CHECKIMAGE_NAME' not in self.config: self.config['CHECKIMAGE_NAME'] = join(self.wordir,'check.fits')
         self.out = sew(self.file)
         self.catalog = self.out['table']
         self.seg_file = self.config['CHECKIMAGE_NAME']
@@ -437,6 +443,10 @@ class SExtractor:
 
     def load_catalog(self, file):
         self.cat = Table.read(file, format='ascii.sextractor')
+
+    def print_config_default(self):
+        print('SExtractor configuration:')
+        print(os.system(f'{self.sexpath} -dd'))
 
 class MTObjects():
     '''API of the MTObjects program by Caroline Haigh.

@@ -33,6 +33,10 @@ from lmfit.models import GaussianModel
 from sklearn.cluster import KMeans
 
 
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning, message='.*converting a masked element to nan.*')
+warnings.filterwarnings('ignore', category=RuntimeWarning, message='.*invalid value encountered in log10.*')
+
 
 class Profile:
     '''
@@ -783,8 +787,17 @@ def elliptical_radial_profile(data, rad, center, pa, eps, growth_rate=1.03, weig
     -------
         profile : astropipe.sbprofile.Profile
             Profile object with the radial profile.
-   '''
 
+    @TODO: Once the radius is given, like using __call__ from the profile object
+    the elliptical apertures are generated differently, than the onces from the profile
+    this is because the line:
+        if i>0:
+            profile.rad[i] = (profile.rad[i-1] + profile.rad[i])/2
+    where it computes the mean of the radius.
+   '''
+    if not hasattr(data, 'mask'):
+        data = np.ma.masked_array(data, mask=np.zeros_like(data, dtype=bool))
+    
     if type(rad) not in [np.ndarray, list]:
         profile = Profile(max_radius=rad, growth_rate=growth_rate)
         profile.set_params(pa=pa, eps=eps, center=center)
@@ -2063,11 +2076,33 @@ def create_matrix_by_bins(x, y, bins):
 
 
 def elliptical_profile_fast(data, rad, center, pa, eps):
-
+    ''' Measure the radial profile of an image following an elliptical shape 
+    only using numpy operations (no loops). The profile is measured in bins of radius given by the input.
+    
+    Parameters
+    ----------
+        data : array_like
+            2D array with the image data. Compatible with masked arrays (masked values will be ignored).
+        rad : array_like
+            Array of radius bins where the profile will be measured.
+        center : tuple
+            (x,y) coordinates of the center of the galaxy [pixels].
+        pa : float
+            Position angle of the ellipse in degrees (counterclockwise from x-axis).
+        eps : float
+            Ellipticity of the ellipse (0 <= e < 1).
+    Returns
+    -------
+        flux : array
+            Flux in each isophote at each radius bin.
+        flux_err : array
+            Standard error of the mean flux for each radius bin.
+    -----
+    '''
     x = create_ellipse_meshgrid(eps, pa, center, data.shape).flatten()[~data.mask.flatten()]
     y = data.flatten()[~data.mask.flatten()]
 
     z = create_matrix_by_bins(x,y,rad)
-    _,intensity,intensity_err = sigma_clipped_stats(z,axis=1)
+    _,flux,flux_err = sigma_clipped_stats(z,axis=1)
     
-    return intensity,intensity_err
+    return flux,flux_err
